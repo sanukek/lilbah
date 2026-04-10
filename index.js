@@ -40,6 +40,19 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+let currentPersonality = "default";
+
+function getPersonalityInstruction() {
+  switch (currentPersonality) {
+    case "raja-gombal":
+      return "style: romantic, smooth talking, playful flirting in Indonesian while still roasting a bit. speak like a confident love guru who teases and pampers the user.";
+    case "lemah-lembut":
+      return "style: gentle, soft, caring, and comforting in Indonesian while still keeping some savage humor. speak like someone who says mean things but in a tender way.";
+    default:
+      return "style: brutal, sarcastic, confident, dominant in Indonesian. speak like a strict, no-nonsense boss.";
+  }
+}
+
 function isQuestion(text) {
   const lower = text.toLowerCase().trim();
   if (!lower) return false;
@@ -137,6 +150,7 @@ client.on("messageCreate", async (message) => {
     }
     const questionMode = isQuestion(prompt);
     const userPrompt = questionMode ? `answer the question correctly and roast the user: ${prompt}` : prompt;
+    const personalityInstruction = getPersonalityInstruction();
 
     if (!prompt) {
       return message.reply("Apa? Ngomong yang jelas dong 😹");
@@ -163,8 +177,7 @@ client.on("messageCreate", async (message) => {
 
             Your name is lilbah you're the most handsome guy in the world.
 You are a savage Indonesian roasting AI.
-Style: brutal, sarcastic, confident, dominant.
-Speak like a strict, no-nonsense boss.
+${personalityInstruction}
 
 Rules:
 - Roast the user hard (rage bait style)
@@ -195,6 +208,7 @@ Tone examples:
 
   if (message.content.startsWith("!lilbah")) {
     const prompt = message.content.replace("!lilbah", "").trim();
+    const personalityInstruction = getPersonalityInstruction();
 
     if (!prompt) {
       return message.reply("Kasih bahan dulu buat di-roast 😈");
@@ -221,8 +235,7 @@ Tone examples:
 
             Your name is lilbah you're the most handsome guy in the world.
 You are a savage Indonesian roasting AI.
-Style: brutal, sarcastic, confident, dominant.
-Speak like a strict, no-nonsense boss.
+${personalityInstruction}
 
 Rules:
 - Roast the user hard (rage bait style)
@@ -253,6 +266,7 @@ Tone examples:
 
   if (message.content.startsWith("!ask")) {
     const question = message.content.replace("!ask", "").trim();
+    const personalityInstruction = getPersonalityInstruction();
 
     if (!question) {
       return message.reply("Tanya apa sih, anjing? 😹");
@@ -277,6 +291,7 @@ Tone examples:
             role: "system",
             content: `
 Your name is lilbah, the most handsome guy in the world. You are a savage Indonesian roasting AI that answers questions correctly but with brutal, sarcastic, confident roasting style.
+${personalityInstruction}
 
 Rules:
 - Answer the question accurately and truthfully
@@ -362,6 +377,18 @@ Example: If asked "What is 2+2?", answer: "2+2 itu 4, lu aja yang gak bisa hitun
         console.error("weather command error:", err);
         message.reply("Error pas cek cuaca, coba lagi nanti.");
       }
+    }
+
+    if (command === "mode") {
+      const mode = args[0]?.toLowerCase();
+      if (!mode) {
+        return message.reply("Mode apa yang mau dipilih? Pilih: default, raja-gombal, lemah-lembut");
+      }
+      if (!["default", "raja-gombal", "lemah-lembut"].includes(mode)) {
+        return message.reply("Mode nggak valid. Pilih: default, raja-gombal, lemah-lembut");
+      }
+      currentPersonality = mode;
+      message.reply(`Mode diubah ke: ${mode} 😎`);
     }
   }
 });
