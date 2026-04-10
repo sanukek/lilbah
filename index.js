@@ -1,6 +1,12 @@
 require("dotenv").config();
+const http = require("http");
 const { Client, GatewayIntentBits } = require("discord.js");
 const OpenAI = require("openai");
+
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end("OK");
+}).listen(process.env.PORT || 3000);
 
 const client = new Client({
   intents: [
