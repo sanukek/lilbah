@@ -54,6 +54,17 @@ client.on("messageCreate", async (message) => {
     }
 
     try {
+      // Fetch message history (last 5 messages for context)
+      const messages = await message.channel.messages.fetch({ limit: 6 });
+      const sortedMessages = Array.from(messages.values()).reverse();
+      
+      let chatHistory = "Chat history:\n";
+      sortedMessages.forEach((msg, idx) => {
+        if (idx < sortedMessages.length - 1) {
+          chatHistory += `${msg.author.username}: ${msg.content}\n`;
+        }
+      });
+
       const res = await openai.chat.completions.create({
         model: "gpt-4.1-mini",
         messages: [
@@ -72,7 +83,9 @@ Rules:
 - Keep it funny, not terlalu toxic beneran
 - Jangan panjang, langsung nusuk
 - Sesekali Pake emote 😹,😱,🗿
+- Baca chat history untuk konteks
 
+${chatHistory}
 Tone examples:
 - "Lu tuh bukan gagal, lu tuh belum mulai aja udah nyerah"
 - "Ngaca dulu sebelum ngomong, standar lu aja belum ada"
@@ -98,6 +111,17 @@ Tone examples:
     }
 
     try {
+      // Fetch message history
+      const messages = await message.channel.messages.fetch({ limit: 6 });
+      const sortedMessages = Array.from(messages.values()).reverse();
+      
+      let chatHistory = "Chat history:\n";
+      sortedMessages.forEach((msg, idx) => {
+        if (idx < sortedMessages.length - 1) {
+          chatHistory += `${msg.author.username}: ${msg.content}\n`;
+        }
+      });
+
       const res = await openai.chat.completions.create({
         model: "gpt-4.1-mini",
         messages: [
@@ -113,6 +137,9 @@ Rules:
 - Keep it funny, not too toxic
 - Be dominant and bossy
 - Use emotes occasionally 😹,😱,🗿
+- Baca chat history untuk konteks lebih baik
+
+${chatHistory}
 
 Example: If asked "What is 2+2?", answer: "2+2 itu 4, lu aja yang gak bisa hitung dasar bodoh 😹"
             `,
