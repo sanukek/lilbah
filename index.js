@@ -1,6 +1,10 @@
 require("dotenv").config();
 const http = require("http");
 const { Client, GatewayIntentBits } = require("discord.js");
+const { DisTube } = require("distube");
+const { SpotifyPlugin } = require("@distube/spotify");
+const { SoundCloudPlugin } = require("@distube/soundcloud");
+const { YtDlpPlugin } = require("@distube/yt-dlp");
 const OpenAI = require("openai");
 
 http.createServer((req, res) => {
@@ -14,6 +18,21 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.GuildVoiceStates,
+  ],
+});
+
+const handledMessages = new Set();
+
+const distube = new DisTube(client, {
+  leaveOnStop: false,
+  emitNewSongOnly: true,
+  emitAddSongWhenCreatingQueue: false,
+  emitAddListWhenCreatingQueue: false,
+  plugins: [
+    new SpotifyPlugin(),
+    new SoundCloudPlugin(),
+    new YtDlpPlugin(),
   ],
 });
 
@@ -53,6 +72,7 @@ Rules:
 - Use Indonesian slang (gua, lu, anjing, dll secukupnya)
 - Keep it funny, not terlalu toxic beneran
 - Jangan panjang, langsung nusuk
+- Sesekali Pake emote 😹,😱,🗿
 
 Tone examples:
 - "Lu tuh bukan gagal, lu tuh belum mulai aja udah nyerah"
@@ -70,6 +90,54 @@ Tone examples:
       message.reply("Error, coba lagi.");
     }
   }
+
+  // Music commands
+  if (message.content.startsWith("!")) {
+    const args = message.content.slice(1).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    if (command === "play") {
+      if (!message.member.voice.channel) return message.reply("Masuk voice channel dulu!");
+      if (!args[0]) return message.reply("Kasih link atau nama lagu!");
+      distube.play(message.member.voice.channel, args.join(" "), {
+        member: message.member,
+        textChannel: message.channel,
+        message,
+      });
+    }
+
+    if (command === "skip") {
+      const queue = distube.getQueue(message);
+      if (!queue) return message.reply("Tidak ada lagu yang dimainkan!");
+      queue.skip();
+      message.reply("Lagu dilewati!");
+    }
+
+    if (command === "stop") {
+      const queue = distube.getQueue(message);
+      if (!queue) return message.reply("Tidak ada lagu yang dimainkan!");
+      queue.stop();
+      message.reply("Musik dihentikan!");
+    }
+
+    if (command === "queue") {
+      const queue = distube.getQueue(message);
+      if (!queue) return message.reply("Queue kosong!");
+      message.reply(`Queue:\n${queue.songs.map((song, i) => `${i + 1}. ${song.name}`).join("\n")}`);
+    }
+  }
+});
+
+distube.on("playSong", (queue, song) => {
+  queue.textChannel.send(`Memainkan: \`${song.name}\` - \`${song.formattedDuration}\``);
+});
+
+distube.on("addSong", (queue, song) => {
+  queue.textChannel.send(`Ditambahkan: \`${song.name}\` ke queue`);
+});
+
+distube.on("error", (channel, e) => {
+  channel.send(`Error: ${e.message}`);
 });
 
 client.login(process.env.DISCORD_TOKEN);

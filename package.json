@@ -6,7 +6,11 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "@distube/soundcloud": "^2.0.4",
+    "@distube/spotify": "^2.0.2",
+    "@distube/yt-dlp": "^2.0.1",
     "discord.js": "^14.14.1",
+    "distube": "^5.2.3",
     "dotenv": "^16.4.5",
     "openai": "^4.56.0"
   }
