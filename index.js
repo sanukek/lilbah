@@ -5,6 +5,7 @@ const { DisTube } = require("distube");
 const { SpotifyPlugin } = require("@distube/spotify");
 const { SoundCloudPlugin } = require("@distube/soundcloud");
 const { YtDlpPlugin } = require("@distube/yt-dlp");
+const { fetch } = require("undici");
 const OpenAI = require("openai");
 
 http.createServer((req, res) => {
@@ -58,9 +59,11 @@ function isQuestion(text) {
 }
 
 async function getLocationCoordinates(query) {
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=id&format=json`;
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=id`;
   const res = await fetch(url);
-  if (!res.ok) return null;
+  if (!res.ok) {
+    throw new Error(`geocoding failed ${res.status}`);
+  }
   const data = await res.json();
   if (!data.results || data.results.length === 0) return null;
   const { latitude, longitude, name, country, admin1 } = data.results[0];
@@ -70,7 +73,9 @@ async function getLocationCoordinates(query) {
 async function getWeatherReport(latitude, longitude) {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&timezone=auto`;
   const res = await fetch(url);
-  if (!res.ok) return null;
+  if (!res.ok) {
+    throw new Error(`weather fetch failed ${res.status}`);
+  }
   const data = await res.json();
   return data.current_weather || null;
 }
@@ -346,7 +351,7 @@ Example: If asked "What is 2+2?", answer: "2+2 itu 4, lu aja yang gak bisa hitun
         const description = weatherCodeToDescription(weather.weathercode);
         message.reply(`cuaca di ${location.name}, ${location.admin1 || location.country}: ${description}, suhu ${weather.temperature}°c, kecepatan angin ${weather.windspeed} km/jam.`);
       } catch (err) {
-        console.error(err);
+        console.error("weather command error:", err);
         message.reply("Error pas cek cuaca, coba lagi nanti.");
       }
     }
