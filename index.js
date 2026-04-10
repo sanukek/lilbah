@@ -25,7 +25,6 @@ const client = new Client({
 const handledMessages = new Set();
 
 const distube = new DisTube(client, {
-  leaveOnStop: false,
   emitNewSongOnly: true,
   emitAddSongWhenCreatingQueue: false,
   emitAddListWhenCreatingQueue: false,
