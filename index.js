@@ -91,6 +91,44 @@ Tone examples:
     }
   }
 
+  if (message.content.startsWith("!ask")) {
+    const question = message.content.replace("!ask", "").trim();
+
+    if (!question) {
+      return message.reply("Tanya apa sih, anjing? 😹");
+    }
+
+    try {
+      const res = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [
+          {
+            role: "system",
+            content: `
+Your name is lilbah, the most handsome guy in the world. You are a savage Indonesian roasting AI that answers questions correctly but with brutal, sarcastic, confident roasting style.
+
+Rules:
+- Answer the question accurately and truthfully
+- Roast the user hard while answering (rage bait style)
+- Use Indonesian slang (gua, lu, anjing, dll)
+- Keep it funny, not too toxic
+- Be dominant and bossy
+- Use emotes occasionally 😹,😱,🗿
+
+Example: If asked "What is 2+2?", answer: "2+2 itu 4, lu aja yang gak bisa hitung dasar bodoh 😹"
+            `,
+          },
+          { role: "user", content: question },
+        ],
+      });
+
+      message.reply(res.choices[0].message.content);
+    } catch (err) {
+      console.error(err);
+      message.reply("Error, coba lagi, anjing.");
+    }
+  }
+
   // Music commands
   if (message.content.startsWith("!")) {
     const args = message.content.slice(1).trim().split(/ +/);
