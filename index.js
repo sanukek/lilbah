@@ -121,12 +121,20 @@ client.on("ready", () => {
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  // Auto reply if bot is mentioned or replied to
+  // Auto reply if bot is mentioned, replied to, or message contains sililbah
   const isReplyToBot = message.reference && (await message.channel.messages.fetch(message.reference.messageId)).author.id === client.user.id;
   const isMentioned = message.mentions.has(client.user);
+  const lowerContent = message.content.toLowerCase();
+  const isSililbah = lowerContent.includes("sililbah");
 
-  if (isReplyToBot || isMentioned) {
-    const prompt = message.content.replace(`<@${client.user.id}>`, "").replace(`<@!${client.user.id}>`, "").trim();
+  if (isReplyToBot || isMentioned || isSililbah) {
+    let prompt = message.content;
+    if (isMentioned) {
+      prompt = prompt.replace(`<@${client.user.id}>`, "").replace(`<@!${client.user.id}>`, "").trim();
+    }
+    if (isSililbah) {
+      prompt = prompt.replace(/sililbah/gi, "").trim() || prompt;
+    }
     const questionMode = isQuestion(prompt);
     const userPrompt = questionMode ? `answer the question correctly and roast the user: ${prompt}` : prompt;
 
