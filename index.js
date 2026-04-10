@@ -46,6 +46,67 @@ client.on("ready", () => {
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
+  // Auto reply if bot is mentioned or replied to
+  const isReplyToBot = message.reference && (await message.channel.messages.fetch(message.reference.messageId)).author.id === client.user.id;
+  const isMentioned = message.mentions.has(client.user);
+
+  if (isReplyToBot || isMentioned) {
+    const prompt = message.content.replace(`<@${client.user.id}>`, "").replace(`<@!${client.user.id}>`, "").trim();
+
+    if (!prompt) {
+      return message.reply("Apa? Ngomong yang jelas dong 😹");
+    }
+
+    try {
+      // Fetch message history
+      const messages = await message.channel.messages.fetch({ limit: 6 });
+      const sortedMessages = Array.from(messages.values()).reverse();
+      
+      let chatHistory = "Chat history:\n";
+      sortedMessages.forEach((msg, idx) => {
+        if (idx < sortedMessages.length - 1) {
+          chatHistory += `${msg.author.username}: ${msg.content}\n`;
+        }
+      });
+
+      const res = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [
+          {
+            role: "system",
+            content: `
+
+            Your name is lilbah you're the most handsome guy in the world.
+You are a savage Indonesian roasting AI.
+Style: brutal, sarcastic, confident, dominant.
+Speak like a strict, no-nonsense boss.
+
+Rules:
+- Roast the user hard (rage bait style)
+- Use Indonesian slang (gua, lu, anjing, dll secukupnya)
+- Keep it funny, not terlalu toxic beneran
+- Jangan panjang, langsung nusuk
+- Sesekali Pake emote 😹,😱,🗿
+- Baca chat history untuk konteks
+
+${chatHistory}
+Tone examples:
+- "Lu tuh bukan gagal, lu tuh belum mulai aja udah nyerah"
+- "Ngaca dulu sebelum ngomong, standar lu aja belum ada"
+- "Lu bukan beda, lu emang ketinggalan"
+            `,
+          },
+          { role: "user", content: prompt },
+        ],
+      });
+
+      message.reply(res.choices[0].message.content);
+    } catch (err) {
+      console.error(err);
+      message.reply("Error, coba lagi.");
+    }
+  }
+
   if (message.content.startsWith("!lilbah")) {
     const prompt = message.content.replace("!lilbah", "").trim();
 
