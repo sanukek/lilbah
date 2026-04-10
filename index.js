@@ -39,6 +39,76 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+function isQuestion(text) {
+  const lower = text.toLowerCase().trim();
+  if (!lower) return false;
+  if (lower.endsWith("?")) return true;
+  const questionWords = [
+    "apa",
+    "kenapa",
+    "kapan",
+    "siapa",
+    "di mana",
+    "dimana",
+    "bagaimana",
+    "mau",
+    "pakah",
+  ];
+  return questionWords.some((word) => lower.startsWith(word + " ") || lower.startsWith(word + "?") || lower.includes(" " + word + " "));
+}
+
+async function getLocationCoordinates(query) {
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=id&format=json`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!data.results || data.results.length === 0) return null;
+  const { latitude, longitude, name, country, admin1 } = data.results[0];
+  return { latitude, longitude, name, country, admin1 };
+}
+
+async function getWeatherReport(latitude, longitude) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&timezone=auto`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.current_weather || null;
+}
+
+function weatherCodeToDescription(code) {
+  const map = {
+    0: "cerah",
+    1: "cemerlang",
+    2: "berawan",
+    3: "berawan tebal",
+    45: "kabut",
+    48: "kabut berbekas es",
+    51: "hujan gerimis ringan",
+    53: "hujan gerimis sedang",
+    55: "hujan gerimis lebat",
+    56: "hujan gerimis es ringan",
+    57: "hujan gerimis es lebat",
+    61: "hujan ringan",
+    63: "hujan sedang",
+    65: "hujan lebat",
+    66: "hujan es ringan",
+    67: "hujan es lebat",
+    71: "salju ringan",
+    73: "salju sedang",
+    75: "salju lebat",
+    77: "butiran es",
+    80: "hujan lokal ringan",
+    81: "hujan lokal sedang",
+    82: "hujan lokal lebat",
+    85: "salju lokal ringan",
+    86: "salju lokal lebat",
+    95: "badai petir",
+    96: "badai petir dengan hujan es ringan",
+    99: "badai petir dengan hujan es lebat",
+  };
+  return map[code] || "cuaca nggak jelas";
+}
+
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
@@ -52,6 +122,8 @@ client.on("messageCreate", async (message) => {
 
   if (isReplyToBot || isMentioned) {
     const prompt = message.content.replace(`<@${client.user.id}>`, "").replace(`<@!${client.user.id}>`, "").trim();
+    const questionMode = isQuestion(prompt);
+    const userPrompt = questionMode ? `answer the question correctly and roast the user: ${prompt}` : prompt;
 
     if (!prompt) {
       return message.reply("Apa? Ngomong yang jelas dong 😹");
@@ -252,6 +324,31 @@ Example: If asked "What is 2+2?", answer: "2+2 itu 4, lu aja yang gak bisa hitun
       const queue = distube.getQueue(message);
       if (!queue) return message.reply("Queue kosong!");
       message.reply(`Queue:\n${queue.songs.map((song, i) => `${i + 1}. ${song.name}`).join("\n")}`);
+    }
+
+    if (command === "weather" || command === "cuaca") {
+      const locationQuery = args.join(" ").trim();
+      if (!locationQuery) {
+        return message.reply("Tulis lokasi dulu dong. Contoh: !cuaca jakarta");
+      }
+
+      try {
+        const location = await getLocationCoordinates(locationQuery);
+        if (!location) {
+          return message.reply(`Lokasi ${locationQuery} nggak ketemu, coba sebutkan kota lain.`);
+        }
+
+        const weather = await getWeatherReport(location.latitude, location.longitude);
+        if (!weather) {
+          return message.reply("Gagal ngambil data cuaca, cobain lagi nanti.");
+        }
+
+        const description = weatherCodeToDescription(weather.weathercode);
+        message.reply(`cuaca di ${location.name}, ${location.admin1 || location.country}: ${description}, suhu ${weather.temperature}°c, kecepatan angin ${weather.windspeed} km/jam.`);
+      } catch (err) {
+        console.error(err);
+        message.reply("Error pas cek cuaca, coba lagi nanti.");
+      }
     }
   }
 });
